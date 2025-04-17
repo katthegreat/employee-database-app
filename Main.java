@@ -1,4 +1,6 @@
 import java.sql.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 public class Main {
@@ -14,9 +16,10 @@ public class Main {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
             Connection conn = DriverManager.getConnection(
+                // modified for personal sql user and pass
                     "jdbc:mysql://localhost:3306/employeeData",
                     "root",
-                    "Lionking2003!!!!"
+                    "212004"
             );
 
             boolean loggedIn = false;
@@ -248,22 +251,57 @@ public class Main {
                     System.out.println("✅ Salary updated to $" + newSalary);
 
                 } else if (choice.equals("2")) {
-                    System.out.print("Enter new job title: ");
-                    String newJobTitle = scanner.nextLine().trim();
-                    String updateJob = "UPDATE employees SET JobTitle = ? WHERE empid = ?";
+                    // Show job title options
+                    System.out.println("\nEmployee Job Title Manager");
+                    System.out.println("(100, 'software manager')");
+                    System.out.println("(101, 'software architect')");
+                    System.out.println("(102, 'software engineer')");
+                    System.out.println("(103, 'software developer')");
+                    System.out.println("(200, 'marketing manager')");
+                    System.out.println("(201, 'marketing associate')");
+                    System.out.println("(202, 'marketing assistant')");
+                    System.out.println("(900, 'Chief Exec. Officer')");
+                    System.out.println("(901, 'Chief Finn. Officer')");
+                    System.out.println("(902, 'Chief Info. Officer')");
+                
+                    System.out.print("Enter new job title id: "); 
+                    String jobTitleId = scanner.nextLine().trim();
+
+                    // switch statement to match user input
+                    String jobTitleText;
+                    switch(jobTitleId) {
+                        case "100": jobTitleText = "software manager"; break;
+                        case "101": jobTitleText = "software architect"; break;
+                        case "102": jobTitleText = "software engineer"; break;
+                        case "103": jobTitleText = "software developer"; break;
+                        case "200": jobTitleText = "marketing manager"; break;
+                        case "201": jobTitleText = "marketing associate"; break;
+                        case "202": jobTitleText = "marketing assistant"; break;
+                        case "900": jobTitleText = "Chief Exec. Officer"; break;
+                        case "901": jobTitleText = "Chief Finn. Officer"; break;
+                        case "902": jobTitleText = "Chief Info. Officer"; break;
+                        default: jobTitleText = "Unknown";
+                    }
+
+                    String updateJob = "INSERT INTO employee_job_titles (empid, job_title_id) VALUES (?, ?) " + "ON DUPLICATE KEY UPDATE job_title_id = ?";
                     PreparedStatement updateStmt = conn.prepareStatement(updateJob);
-                    updateStmt.setString(1, newJobTitle);
-                    updateStmt.setInt(2, empidToUpdate);
+                    updateStmt.setInt(1, empidToUpdate);
+                    updateStmt.setString(2, jobTitleId);
+                    updateStmt.setString(3, jobTitleId);
+                    
                     updateStmt.executeUpdate();
-                    System.out.println("✅ Job Title updated to: " + newJobTitle);
+                    System.out.println("✅ Job Title updated to: " + jobTitleText);
 
                 } else if (choice.equals("3")) {
                     System.out.print("Enter new division: ");
                     String newDivision = scanner.nextLine().trim();
-                    String updateDiv = "UPDATE employees SET Division = ? WHERE empid = ?";
+
+                    String updateDiv = "INSERT INTO employee_division (empid, div_ID) VALUES (?, ?) " + "ON DUPLICATE KEY UPDATE div_ID = ?";
+                    
                     PreparedStatement updateStmt = conn.prepareStatement(updateDiv);
-                    updateStmt.setString(1, newDivision);
-                    updateStmt.setInt(2, empidToUpdate);
+                    updateStmt.setInt(1, empidToUpdate);
+                    updateStmt.setString(2, newDivision);
+                    updateStmt.setString(3, newDivision);
                     updateStmt.executeUpdate();
                     System.out.println("✅ Division updated to: " + newDivision);
 
