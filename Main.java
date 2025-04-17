@@ -19,7 +19,7 @@ public class Main {
                 // modified for personal sql user and pass
                     "jdbc:mysql://localhost:3306/employeeData",
                     "root",
-                    "212004"
+                    "password" //change this passoword to your sql password
             );
 
             boolean loggedIn = false;
@@ -241,14 +241,94 @@ public class Main {
                 String choice = scanner.nextLine().trim();
 
                 if (choice.equals("1")) {
-                    System.out.print("Enter new salary: ");
-                    double newSalary = Double.parseDouble(scanner.nextLine().trim());
-                    String updateSalary = "UPDATE employees SET Salary = ? WHERE empid = ?";
-                    PreparedStatement updateStmt = conn.prepareStatement(updateSalary);
-                    updateStmt.setDouble(1, newSalary);
-                    updateStmt.setInt(2, empidToUpdate);
-                    updateStmt.executeUpdate();
-                    System.out.println("✅ Salary updated to $" + newSalary);
+                    
+                    // two choices - 1. enter specific salary or 2. apply % increase
+                    double currentSalary = empResults.getDouble("Salary");
+                    System.out.println("\nCurrent Salary: $" + currentSalary);
+                    System.out.println("Select raise type:");
+                    System.out.println("1. Enter specific new salary");
+                    System.out.println("2. Apply percentage increase");
+                    System.out.print("Enter choice (1-2): ");
+                    String salaryChoice = scanner.nextLine().trim();
+
+                    if (salaryChoice.equals("1")) {
+                        // direct salary update
+                        // this is the choice 1
+                        System.out.print("Enter new salary: ");
+                        double newSalary = Double.parseDouble(scanner.nextLine().trim());
+                        String updateSalary = "UPDATE employees SET Salary = ? WHERE empid = ?";
+                        PreparedStatement updateStmt = conn.prepareStatement(updateSalary);
+                        updateStmt.setDouble(1, newSalary);
+                        updateStmt.setInt(2, empidToUpdate);
+                        updateStmt.executeUpdate();
+                        System.out.println("✅ Salary updated to $" + newSalary);
+                        
+                    } // choice 2 here for % salary increase
+                    else if (salaryChoice.equals("2")) {
+                        //  print statements for % increase 
+                        System.out.println("\nAvailable Raise Options:");
+                        System.out.println("1. 3.2% for salaries $58K-$105K");
+                        System.out.println("2. 4.5% for salaries under $58K");
+                        System.out.println("3. 2.1% for salaries $105K+");
+                        System.out.print("Select raise percentage (1-3): ");
+                        String raiseChoice = scanner.nextLine().trim();
+
+                        double percentage = 0;
+                        String rangeDescription = "";
+
+                        // switch statment to check range
+                        switch (raiseChoice) {
+                            case "1":
+                                if (currentSalary >= 58000 && currentSalary < 105000) {
+                                    percentage = 3.2;
+                                    rangeDescription = "58k-105k range (3.2%)";
+                                } else {
+                                    System.out.println("❌ Employee salary not in 58K-105K range");
+                                    return;
+                                }
+                                
+                                break;
+                            
+                            case "2" :
+                                if (currentSalary < 58000) {
+                                    percentage = 4.5;
+                                    rangeDescription = "under 58K range (4.5%)";
+                                } else {
+                                    System.out.println("❌ Employee salary not under 58K");
+                                    return;
+                                }
+                                break;
+
+                                case "3":
+                                if (currentSalary >= 105000) {
+                                    percentage = 2.1;
+                                    rangeDescription = "105K+ range (2.1%)";
+                                } else {
+                                    System.out.println("❌ Employee salary not 105K+");
+                                    return;
+                                }
+                                break;
+
+                            default:
+                                System.out.println("❌ Invalid raise selection");
+                                // break;
+                                return;
+                        }
+
+                        double newSalary = currentSalary * (1 + percentage/100);
+                        newSalary = Math.round(newSalary * 100) / 100.0; //round to 2 decimal places
+                        
+                        String updateSalary = "UPDATE employees SET Salary = ? WHERE empid = ?";
+                        PreparedStatement updateStmt = conn.prepareStatement(updateSalary);
+                        updateStmt.setDouble(1, newSalary);
+                        updateStmt.setInt(2, empidToUpdate);
+                        updateStmt.execute();
+
+                        System.out.printf("\nApplied %s raise\n", rangeDescription);
+                        System.out.printf("  Old Salary: $%.2f\n", currentSalary);
+                        System.out.printf("  New Salary: $%.2f\n", newSalary);
+                        System.out.printf("  Increase: $%.2f (%.1f%%)\n", newSalary - currentSalary, percentage);
+                    }
 
                 } else if (choice.equals("2")) {
                     // Show job title options
