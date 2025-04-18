@@ -2,6 +2,7 @@ import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
+import io.github.cdimascio.dotenv.Dotenv;
 
 public class Main {
     public static void main(String[] args) {
@@ -15,11 +16,18 @@ public class Main {
 
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
+            // added this dotenv for url, user, and password security
+            Dotenv dotenv = Dotenv.load();
+
+            String dbUrl = dotenv.get("DB_URL");
+            String dbUser = dotenv.get("DB_USER");
+            String dbPassword = dotenv.get("DB_PASSWORD");
+
             Connection conn = DriverManager.getConnection(
-                // modified for personal sql user and pass
-                    "jdbc:mysql://localhost:3306/employeeData",
-                    "root",
-                    "password" //change this passoword to your sql password
+                // contains the variables from above
+                dbUrl,
+                dbUser, 
+                dbPassword //change password in env file to your sql password (same for user if its not root)
             );
 
             boolean loggedIn = false;
