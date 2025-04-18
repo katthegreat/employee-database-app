@@ -1,4 +1,6 @@
 import java.sql.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 import io.github.cdimascio.dotenv.Dotenv;
 
@@ -14,13 +16,12 @@ public class Main {
 
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
-            Dotenv dotenv = Dotenv.load();
+            Connection conn = DriverManager.getConnection(
+                    "jdbc:mysql://localhost:3306/employeeData",
+                    "root",
+                    "Lionking2003!!!!"
+            );
 
-            String dbUrl = dotenv.get("DB_URL");
-            String dbUser = dotenv.get("DB_USER");
-            String dbPassword = dotenv.get("DB_PASSWORD");
-
-            Connection conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
             boolean loggedIn = false;
 
             String loginQuery = "SELECT role FROM users WHERE username = ? AND password = ?";
@@ -281,9 +282,42 @@ public class Main {
                 System.out.print("Enter your choice (1-4): ");
                 String choice = scanner.nextLine().trim();
 
-                // Rest of the updateEmployeeData method remains the same
-                // ... [keep the existing implementation here]
-                
+                if (choice.equals("1")) {
+                    System.out.print("Enter new salary: ");
+                    double newSalary = Double.parseDouble(scanner.nextLine().trim());
+                    String updateSalary = "UPDATE employees SET Salary = ? WHERE empid = ?";
+                    PreparedStatement updateStmt = conn.prepareStatement(updateSalary);
+                    updateStmt.setDouble(1, newSalary);
+                    updateStmt.setInt(2, empidToUpdate);
+                    updateStmt.executeUpdate();
+                    System.out.println("✅ Salary updated to $" + newSalary);
+
+                } else if (choice.equals("2")) {
+                    System.out.print("Enter new job title: ");
+                    String newJobTitle = scanner.nextLine().trim();
+                    String updateJob = "UPDATE employees SET JobTitle = ? WHERE empid = ?";
+                    PreparedStatement updateStmt = conn.prepareStatement(updateJob);
+                    updateStmt.setString(1, newJobTitle);
+                    updateStmt.setInt(2, empidToUpdate);
+                    updateStmt.executeUpdate();
+                    System.out.println("✅ Job Title updated to: " + newJobTitle);
+
+                } else if (choice.equals("3")) {
+                    System.out.print("Enter new division: ");
+                    String newDivision = scanner.nextLine().trim();
+                    String updateDiv = "UPDATE employees SET Division = ? WHERE empid = ?";
+                    PreparedStatement updateStmt = conn.prepareStatement(updateDiv);
+                    updateStmt.setString(1, newDivision);
+                    updateStmt.setInt(2, empidToUpdate);
+                    updateStmt.executeUpdate();
+                    System.out.println("✅ Division updated to: " + newDivision);
+
+                } else if (choice.equals("4")) {
+                    System.out.println("✅ Done. Returning to main menu.");
+                } else {
+                    System.out.println("❌ Invalid choice. Returning to menu.");
+                }
+
             } else {
                 System.out.println("❌ Employee not found!");
             }
