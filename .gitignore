@@ -1,0 +1,17 @@
+# Ignore compiled class files
+*.class
+
+# Ignore VS Code settings
+.vscode/
+
+# Ignore JARs and libraries
+*.jar
+
+# Ignore Mac system files
+.DS_Store
+
+# Ignore logs or environment files (if any in future)
+*.log
+.env
+
+
