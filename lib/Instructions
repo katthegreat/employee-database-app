@@ -10,7 +10,7 @@ Welcome! This document will guide you step-by-step on how to run the **Java + My
 - Java JDK
 - VS Code (with Java extensions installed)
 - `mysql-connector-j-9.1.0.jar` placed in a `lib/` folder in the project
-
+- `dotenv-java-2.3.2.jar` placed in a `lib/` folder. You can download here: https://mvnrepository.com/artifact/io.github.cdimascio/dotenv-java/2.3.2  (Click link and see files, click on .jar file to download)
 ---
 
 ## 🧱 Step 1: Set Up the Database
@@ -56,15 +56,30 @@ Employee accounts fetch details by matching `username@example.com` in the `emplo
    Software Dev project/
    ├── lib/
    │   └── mysql-connector-j-9.1.0.jar
-   ├── Main.java
+   |   |___dotenv-java-2.3.2.jar
+   |__.env
+   |── Main.java
    └── Instructions
+   |__gitignore
    ```
+Important: 
+- For env file, it should look exactly like this (except for your sql password and user) - no spaces either
+```
+DB_URL=jdbc:mysql://localhost:3306/employeeData
+DB_USER=root
+DB_PASSWORD=your-password
+```
+For gitignore, it should only have this:
+```
+.env
+```
+
 3. Compile and run from Terminal:
    ```bash
-   javac -cp ".:lib/mysql-connector-j-9.1.0.jar" Main.java
-   java -cp ".:lib/mysql-connector-j-9.1.0.jar" Main
-   ```
+   javac -cp ".;lib/*" Main.java
 
+   java -cp ".;lib/*" Main
+   ```
 ---
 
 ## 🔐 Admin Functionality
