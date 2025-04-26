@@ -12,10 +12,10 @@ TRUNCATE TABLE employee_division;
 TRUNCATE TABLE division;
 TRUNCATE TABLE address;
 
--- Remove DOB from employees table if it exists (since we'll put it in address)
+-- Remove DOB from employees table if it exists
 ALTER TABLE employees DROP COLUMN IF EXISTS DOB;
 
--- Insert job titles (ensuring all IDs are unique)
+-- Insert job titles
 INSERT INTO job_titles (job_title_id, job_title)
 VALUES 
 (100, 'software manager'),
@@ -29,7 +29,7 @@ VALUES
 (901, 'Chief Finn. Officer'),
 (902, 'Chief Info. Officer');
 
--- Insert employees with unique empid, email, and SSN values (no DOB here)
+-- Insert employees
 INSERT INTO employees (empid, Fname, Lname, email, HireDate, Salary, SSN)
 VALUES 
 (1, 'Snoopy', 'Beagle', 'Snoopy@example.com', '2022-08-01', 45000.00, '111-11-1111'),
@@ -48,7 +48,7 @@ VALUES
 (14, 'Elmer', 'Fudd', 'Elmer@example.com', '1934-08-01', 15500.00, '555-11-1111'),
 (15, 'Marvin', 'Martian', 'Marvin@example.com', '1937-05-01', 28000.00, '777-11-1111');
 
--- Insert address information including DOB
+-- Insert address information
 INSERT INTO address (empid, street, city_id, state_id, zip, gender, race, DOB, phone_number)
 VALUES
 (1, '123 Doghouse Lane', 1, 1, '30301', 'Male', 'Beagle', '1990-05-15', '555-1111'),
@@ -67,7 +67,7 @@ VALUES
 (14, '800 Hunting Trail', 2, 2, '10008', 'Male', 'Human', '1972-10-31', '555-1515'),
 (15, '900 Mars Avenue', 2, 2, '10009', 'Male', 'Martian', '1963-04-22', '555-1616');
 
--- Assign job titles to employees (ensuring no duplicate empid+job_title_id combinations)
+-- Assign job titles to employees
 INSERT INTO employee_job_titles (empid, job_title_id)
 VALUES
 (1, 100), 
@@ -94,7 +94,7 @@ VALUES
 (3, 'Human Resources', 'New York', '45 West 57th Street', '', 'NY', 'USA', '00034'),
 (4, 'HQ', 'New York', '45 West 57th Street', '', 'NY', 'USA', '00034');
 
--- Assign employees to divisions (using IGNORE to skip any duplicates)
+-- Assign employees to divisions
 INSERT IGNORE INTO employee_division (empid, div_ID)
 VALUES
 (1, 4),
@@ -113,77 +113,41 @@ VALUES
 (14, 3),
 (15, 3);
 
--- Insert payroll records (fixed the SELECT to INSERT for record 16)
+-- Insert comprehensive payroll records (12 months for each employee)
 INSERT INTO payroll (payID, pay_date, empid, earnings, fed_tax, fed_med, fed_SS, state_tax, retire_401k, health_care)
+WITH months AS (
+    SELECT 0 as month_offset UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 
+    UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9 
+    UNION SELECT 10 UNION SELECT 11
+)
 SELECT 
-    1,
-    '2025-01-31', 
-    1, 
-    salary/52.0, 
-    (salary/52.0)*0.32, 
-    (salary/52.0)*0.0145,
-    (salary/52.0)*0.062,
-    (salary/52.0)*0.12,
-    (salary/52.0)*0.004,
-    (salary/52.0)*0.031
-FROM employees WHERE employees.empid=1;
-
-INSERT INTO payroll (payID, pay_date, empid, earnings, fed_tax, fed_med, fed_SS, state_tax, retire_401k, health_care)
-SELECT 
-    2,
-    '2025-02-28', 
-    1, 
-    salary/52.0, 
-    (salary/52.0)*0.32, 
-    (salary/52.0)*0.0145, 
-    (salary/52.0)*0.062,
-    (salary/52.0)*0.12,
-    (salary/52.0)*0.004,
-    (salary/52.0)*0.031 
-FROM employees WHERE employees.empid=1;
-
--- [All other payroll inserts remain the same, just ensure payID values are unique]
-
--- Fixed the SELECT that should be INSERT for record 16
-INSERT INTO payroll (payID, pay_date, empid, earnings, fed_tax, fed_med, fed_SS, state_tax, retire_401k, health_care)
-SELECT 
-    16,
-    '2025-01-31', 
-    7, 
-    salary/52.0, 
-    (salary/52.0)*0.32, 
-    (salary/52.0)*0.0145, 
-    (salary/52.0)*0.062,
-    (salary/52.0)*0.12,
-    (salary/52.0)*0.004,
-    (salary/52.0)*0.031 
-FROM employees WHERE employees.empid=7;
-
--- Final query to view employee data with DOB included from address table
+    e.empid * 100 + m.month_offset AS payID,
+    DATE_FORMAT(DATE_SUB(CURRENT_DATE, INTERVAL m.month_offset MONTH), '%Y-%m-01') AS pay_date,
+    e.empid,
+    ROUND(e.Salary/12, 2) AS earnings,
+    ROUND((e.Salary/12)*0.32, 2) AS fed_tax,
+    ROUND((e.Salary/12)*0.0145, 2) AS fed_med,
+    ROUND((e.Salary/12)*0.062, 2) AS fed_SS,
+    ROUND((e.Salary/12)*0.12, 2) AS state_tax,
+    ROUND((e.Salary/12)*0.04, 2) AS retire_401k,
+    ROUND((e.Salary/12)*0.031, 2) AS health_care
+FROM employees e
+CROSS JOIN months m
+ORDER BY e.empid, m.month_offset;
+-- View employee data with payroll information
 SELECT 
     e.empid,
     e.Fname,
     e.Lname,
-    e.email,
-    a.DOB,
-    e.HireDate,
     e.Salary,
-    e.SSN,
-    a.gender,
-    a.race,
-    a.phone_number,
-    GROUP_CONCAT(DISTINCT jt.job_title SEPARATOR ', ') AS job_titles,
-    GROUP_CONCAT(DISTINCT d.Name SEPARATOR ', ') AS divisions,
-    GROUP_CONCAT(DISTINCT d.city SEPARATOR ', ') AS cities,
-    GROUP_CONCAT(DISTINCT d.state SEPARATOR ', ') AS states,
-    GROUP_CONCAT(DISTINCT d.country SEPARATOR ', ') AS countries
+    COUNT(p.payID) AS pay_records,
+    MIN(p.pay_date) AS first_pay_date,
+    MAX(p.pay_date) AS last_pay_date
 FROM employees e
-LEFT JOIN address a ON e.empid = a.empid
-LEFT JOIN employee_job_titles ejt ON e.empid = ejt.empid
-LEFT JOIN job_titles jt ON ejt.job_title_id = jt.job_title_id
-LEFT JOIN employee_division ed ON e.empid = ed.empid
-LEFT JOIN division d ON ed.div_ID = d.ID
-GROUP BY e.empid, e.Fname, e.Lname, e.email, a.DOB, e.HireDate, e.Salary, e.SSN, a.gender, a.race, a.phone_number;
+LEFT JOIN payroll p ON e.empid = p.empid
+GROUP BY e.empid, e.Fname, e.Lname, e.Salary
+ORDER BY e.empid;
 
 -- Re-enable foreign key checks
 SET FOREIGN_KEY_CHECKS=1;
+
