@@ -1,20 +1,18 @@
 import java.sql.*;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Scanner;
 import io.github.cdimascio.dotenv.Dotenv;
 
-
 public class Main {
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
-         // ✅ Load environment variables
         Dotenv dotenv = Dotenv.load();
         String dbUrl = dotenv.get("DB_URL");
         String dbUser = dotenv.get("DB_USER");
         String dbPassword = dotenv.get("DB_PASSWORD");
-
-        
 
         System.out.print("Enter username or email: ");
         String input = scanner.nextLine();
@@ -24,11 +22,7 @@ public class Main {
 
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
-            Connection conn = DriverManager.getConnection(
-                    dbUrl,
-                    dbUser,
-                    dbPassword
-            );
+            Connection conn = DriverManager.getConnection(dbUrl, dbUser, dbPassword);
 
             boolean loggedIn = false;
 
@@ -45,14 +39,14 @@ public class Main {
                 if (role.equalsIgnoreCase("admin")) {
                     System.out.println("\u2696\ufe0f Welcome Admin! You have full access.");
                     
-                    // Admin menu
                     while (true) {
                         System.out.println("\nAdmin Options:");
                         System.out.println("1. Search employee information");
                         System.out.println("2. Update employee information");
                         System.out.println("3. Adjust employee salaries");
-                        System.out.println("4. Exit");
-                        System.out.print("Enter your choice (1-4): ");
+                        System.out.println("4. View employee payroll history");
+                        System.out.println("5. Exit");
+                        System.out.print("Enter your choice (1-5): ");
                         String adminChoice = scanner.nextLine();
                         
                         if (adminChoice.equals("1")) {
@@ -65,6 +59,11 @@ public class Main {
                             adjustSalaries(conn, scanner);
                         } 
                         else if (adminChoice.equals("4")) {
+                            System.out.print("Enter Employee ID to view payroll history: ");
+                            int empId = Integer.parseInt(scanner.nextLine());
+                            viewPayrollHistory(conn, scanner, empId, true);
+                        }
+                        else if (adminChoice.equals("5")) {
                             System.out.println("Exiting the program...");
                             break;
                         } 
@@ -77,7 +76,6 @@ public class Main {
             }
 
             if (!loggedIn) {
-                // Employee login - email as username, "emppass" as password
                 if (password.equals("emppass")) {
                     String empQuery = "SELECT e.empid, e.Fname, e.Lname, e.email, e.HireDate, e.Salary, " +
                                      "RIGHT(e.SSN, 4) AS last4SSN, d.Name AS division_name, jt.job_title " +
@@ -89,7 +87,7 @@ public class Main {
                                      "WHERE e.email = ?";
                     
                     PreparedStatement empStmt = conn.prepareStatement(empQuery);
-                    empStmt.setString(1, input); // input is the email
+                    empStmt.setString(1, input);
                     ResultSet empData = empStmt.executeQuery();
 
                     if (empData.next()) {
@@ -104,6 +102,8 @@ public class Main {
                         System.out.println("Division: " + empData.getString("division_name"));
                         System.out.println("Job Title: " + empData.getString("job_title"));
                         System.out.println("SSN (last 4): ****-**-" + empData.getString("last4SSN"));
+                        
+                        employeePayrollMenu(conn, scanner, empData.getInt("empid"));
                         loggedIn = true;
                     }
                     empData.close();
@@ -225,7 +225,7 @@ public class Main {
             System.out.println("Please enter a valid number.");
         }
     }
-    ////////
+
     private static void updateEmployeeWorkflow(Connection conn, Scanner scanner) {
         try {
             System.out.println("\nFirst, find the employee you want to update:");
@@ -599,6 +599,202 @@ public class Main {
             System.out.println("❌ Database error: " + e.getMessage());
         } catch (NumberFormatException e) {
             System.out.println("❌ Invalid number format. Please enter a valid number.");
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+private static void viewPayrollHistory(Connection conn, Scanner scanner, int empId, boolean isAdmin) {
+    try {
+        // Verify employee exists and get salary
+        String verifyQuery = "SELECT empid, Fname, Lname, Salary FROM employees WHERE empid = ?";
+        PreparedStatement verifyStmt = conn.prepareStatement(verifyQuery);
+        verifyStmt.setInt(1, empId);
+        ResultSet verifyRs = verifyStmt.executeQuery();
+
+        if (!verifyRs.next()) {
+            System.out.println("❌ Employee not found with ID: " + empId);
+            return;
+        }
+
+        double annualSalary = verifyRs.getDouble("Salary");
+        double monthlySalary = annualSalary / 12;
+        String employeeName = verifyRs.getString("Fname") + " " + verifyRs.getString("Lname");
+
+        System.out.println("\n12-Month Payroll History for: " + employeeName);
+        System.out.printf("Annual Salary: $%,.2f | Monthly Gross: $%,.2f%n", annualSalary, monthlySalary);
+        System.out.println("==================================================================================");
+        System.out.printf("%-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s%n", 
+                        "Period", "Gross", "Fed Tax", "Medicare", "SS Tax", "State Tax", 
+                        "401k", "Health", "Net Pay");
+        System.out.println("----------------------------------------------------------------------------------");
+
+        // Realistic deduction percentages (customize these as needed)
+        final double FEDERAL_TAX_PERCENT = 0.12;    // 12%
+        final double STATE_TAX_PERCENT = 0.03;      // 3%
+        final double SOCIAL_SECURITY_PERCENT = 0.062; // 6.2%
+        final double MEDICARE_PERCENT = 0.0145;     // 1.45%
+        final double RETIREMENT_401K_PERCENT = 0.04; // 4%
+        final double HEALTH_INSURANCE_PERCENT = 0.02; // 2%
+
+        // Initialize totals
+        double totalGross = 0;
+        double totalFederalTax = 0;
+        double totalMedicare = 0;
+        double totalSSTax = 0;
+        double totalStateTax = 0;
+        double total401k = 0;
+        double totalHealth = 0;
+        double totalNet = 0;
+
+        // Get current date and set up calendar for monthly iteration
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.MONTH, -11); // Start from 12 months ago
+
+        // Generate 12 months of data
+        for (int i = 0; i < 12; i++) {
+            // Calculate deductions for this month
+            double federalTax = monthlySalary * FEDERAL_TAX_PERCENT;
+            double stateTax = monthlySalary * STATE_TAX_PERCENT;
+            double socialSecurity = monthlySalary * SOCIAL_SECURITY_PERCENT;
+            double medicare = monthlySalary * MEDICARE_PERCENT;
+            double retirement401k = monthlySalary * RETIREMENT_401K_PERCENT;
+            double healthInsurance = monthlySalary * HEALTH_INSURANCE_PERCENT;
+            double netPay = monthlySalary - (federalTax + stateTax + socialSecurity + medicare + retirement401k + healthInsurance);
+
+            // Format month/year display
+            String monthYear = new SimpleDateFormat("MMM yyyy").format(cal.getTime());
+
+            // Print this month's data
+            System.out.printf("%-10s $%-9.2f $%-9.2f $%-9.2f $%-9.2f $%-9.2f $%-9.2f $%-9.2f $%-9.2f%n",
+                            monthYear,
+                            monthlySalary,
+                            federalTax,
+                            medicare,
+                            socialSecurity,
+                            stateTax,
+                            retirement401k,
+                            healthInsurance,
+                            netPay);
+
+            // Accumulate totals
+            totalGross += monthlySalary;
+            totalFederalTax += federalTax;
+            totalMedicare += medicare;
+            totalSSTax += socialSecurity;
+            totalStateTax += stateTax;
+            total401k += retirement401k;
+            totalHealth += healthInsurance;
+            totalNet += netPay;
+
+            // Move to next month
+            cal.add(Calendar.MONTH, 1);
+        }
+
+        // Print totals
+        System.out.println("==================================================================================");
+        System.out.printf("%-10s $%-9.2f $%-9.2f $%-9.2f $%-9.2f $%-9.2f $%-9.2f $%-9.2f $%-9.2f%n",
+                        "TOTALS:",
+                        totalGross,
+                        totalFederalTax,
+                        totalMedicare,
+                        totalSSTax,
+                        totalStateTax,
+                        total401k,
+                        totalHealth,
+                        totalNet);
+
+        // Print percentage summary
+        System.out.println("\nDeduction Summary (% of Gross):");
+        System.out.printf("Federal Tax: %.2f%%%n", (totalFederalTax / totalGross) * 100);
+        System.out.printf("State Tax: %.2f%%%n", (totalStateTax / totalGross) * 100);
+        System.out.printf("Social Security: %.2f%%%n", (totalSSTax / totalGross) * 100);
+        System.out.printf("Medicare: %.2f%%%n", (totalMedicare / totalGross) * 100);
+        System.out.printf("401k: %.2f%%%n", (total401k / totalGross) * 100);
+        System.out.printf("Health Insurance: %.2f%%%n", (totalHealth / totalGross) * 100);
+        System.out.printf("NET PAY: %.2f%% of gross%n", (totalNet / totalGross) * 100);
+
+        verifyRs.close();
+        verifyStmt.close();
+
+    } catch (SQLException e) {
+        System.out.println("❌ Database error: " + e.getMessage());
+    } catch (Exception e) {
+        System.out.println("❌ Error: " + e.getMessage());
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    private static void employeePayrollMenu(Connection conn, Scanner scanner, int empId) {
+        while (true) {
+            System.out.println("\nEmployee Payroll Options:");
+            System.out.println("1. View my payroll history");
+            System.out.println("2. Return to main menu");
+            System.out.print("Enter your choice (1-2): ");
+            String choice = scanner.nextLine();
+            
+            if (choice.equals("1")) {
+                viewPayrollHistory(conn, scanner, empId, false);
+            } else if (choice.equals("2")) {
+                break;
+            } else {
+                System.out.println("Invalid choice. Please try again.");
+            }
         }
     }
 }
