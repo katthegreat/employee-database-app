@@ -45,8 +45,9 @@ public class Main {
                         System.out.println("2. Update employee information");
                         System.out.println("3. Adjust employee salaries");
                         System.out.println("4. View employee payroll history");
-                        System.out.println("5. Exit");
-                        System.out.print("Enter your choice (1-5): ");
+                        System.out.println("5. View Employee Total Monthly Pay"); //doing number 10 - Tahia
+                        System.out.println("6. Exit"); //exit is now option 6 -> see if condition for exit
+                        System.out.print("Enter your choice (1-6): ");
                         String adminChoice = scanner.nextLine();
                         
                         if (adminChoice.equals("1")) {
@@ -63,7 +64,18 @@ public class Main {
                             int empId = Integer.parseInt(scanner.nextLine());
                             viewPayrollHistory(conn, scanner, empId, true);
                         }
+                        //doing number 10, option 5 for Monthly pay
                         else if (adminChoice.equals("5")) {
+                            System.out.print("Generate Total Monthly Pay Report:\n ");
+                            System.out.println("1. By Division - View Sum of Salaries for all Employees in each Division.");
+                            System.out.println("2. By Job Title - View Sum of Salaries for all Employees in each Role.");
+                            System.out.print("Enter your choice (1 or 2): ");
+                            int reportType = Integer.parseInt(scanner.nextLine());
+
+                            generateMonthlyPayReport(conn, reportType);
+                        }
+
+                        else if (adminChoice.equals("6")) { //exit is changed to option 6
                             System.out.println("Exiting the program...");
                             break;
                         } 
@@ -603,36 +615,7 @@ public class Main {
     }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// gauri changes below!!!!!!!
 private static void viewPayrollHistory(Connection conn, Scanner scanner, int empId, boolean isAdmin) {
     try {
         // Verify employee exists and get salary
@@ -753,33 +736,6 @@ private static void viewPayrollHistory(Connection conn, Scanner scanner, int emp
     }
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     private static void employeePayrollMenu(Connection conn, Scanner scanner, int empId) {
         while (true) {
             System.out.println("\nEmployee Payroll Options:");
@@ -797,4 +753,44 @@ private static void viewPayrollHistory(Connection conn, Scanner scanner, int emp
             }
         }
     }
+
+// Total Monthly Report - Summary of salaries being paid across divisions and job titles
+// By Division: View Sum of Salaries for all employees in each division
+// By Job Title: View sum of salaries for all employees in each role
+private static void generateMonthlyPayReport(Connection conn, int reportType) {
+    try {
+        String sql;
+        if (reportType == 1) {
+            sql = "SELECT ed.div_ID, SUM(e.Salary) AS total_monthly_pay " +
+          "FROM employees e " +
+          "JOIN employee_division ed ON e.empId = ed.empId " +  
+          "GROUP BY ed.div_ID " +  
+          "ORDER BY ed.div_ID";  
+
+        } else {
+          //job titles in left column and total monthly pay right column
+          sql = "SELECT jt.job_title, SUM(e.Salary) AS total_monthly_pay " +  
+          "FROM employees e " +
+          "JOIN employee_job_titles ejp ON e.empId = ejp.empId " +
+          "JOIN job_titles jt ON ejp.job_title_id = jt.job_title_id " +
+          "GROUP BY jt.job_title " +  // Group by the name
+          "ORDER BY jt.job_title";    // Order by name
+        }
+        Statement stmt = conn.createStatement();
+        ResultSet rs = stmt.executeQuery(sql);
+        System.out.println("\nTotal Monthly Pay Report:");
+        
+        while (rs.next()) {
+            String group = reportType == 1 ? rs.getString("div_ID") : rs.getString("job_title");
+            double totalPay = rs.getDouble("total_monthly_pay");
+            System.out.printf("%-20s: $%,.2f%n", group, totalPay); 
+        }
+        System.out.println("---------------------------------\n");
+    
+    } catch (SQLException e) {
+        System.out.println("Error generating report: " + e.getMessage());
+        // e.printStackTrace(); //for detailed debugging
+    }
+}
+
 }
